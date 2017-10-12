@@ -2,7 +2,9 @@ from tkinter import *
 from selenium import webdriver
 import datetime, time
 import os
-
+"""
+Kim Hyeock Jin
+"""
 class HomeworkAlarm:
     def __init__(self):
         self.root = Tk()
@@ -70,14 +72,11 @@ class HomeworkAlarm:
         self.login()
 
     def refreshTime(self):
-
         now = datetime.datetime.now()
         nowDay = now.date()
         year = now.year
         remainDays = []
         for homeworkData in self.homeworkList:
-            print((datetime.date(int(year), int(homeworkData[2][1]), int(homeworkData[2][2]))
-                               - nowDay).days)
             remainDays.append((datetime.date(int(year), int(homeworkData[2][1]), int(homeworkData[2][2]))
                                - nowDay).days)
         i = 0
