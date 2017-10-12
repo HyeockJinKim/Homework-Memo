@@ -2,6 +2,20 @@ from tkinter import *
 from selenium import webdriver
 import datetime, time
 import os
+import sys
+import win32com.shell.shell as shell
+ASADMIN = 'asadmin'
+
+def uac_require():
+    try:
+        if sys.argv[-1] != ASADMIN:
+            script = os.path.abspath(sys.argv[0])
+            params = ' '.join([script] + sys.argv[1:] + [ASADMIN])
+            shell.ShellExecuteEx(lpVerb='runas', lpFile=sys.executable, lpParameters=params)
+            sys.exit(0)
+        return True
+    except:
+        return False
 
 """
 Kim Hyeock Jin
@@ -108,8 +122,6 @@ class HomeworkAlarm:
                     homeworkData.append('1 시간 이내..')
             i += 1
 
-
-
     def homeworkListSort(self):
         i = 0
         hwTime = []
@@ -141,8 +153,6 @@ class HomeworkAlarm:
             self.endTime[i].grid(row=i + 1, column=2)
             self.remain[i].grid(row=i + 1, column=3)
             i += 1
-
-
 
     def readHomeworkList(self, id, pw):
         main_driver = webdriver.PhantomJS("./phantomjs.exe")
@@ -205,9 +215,13 @@ class HomeworkAlarm:
             self.root.mainloop()
 
 def main():
-
     HW = HomeworkAlarm()
 
 
 if __name__ == '__main__':
-    main()
+    if uac_require():# 관리자 권한
+        main()
+    else:
+        root = Tk()
+        root.title("과제 시간표")
+        Label(root, text='관리자 권한 받기 실패').pack()
