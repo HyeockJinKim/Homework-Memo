@@ -2,6 +2,7 @@ from tkinter import *
 from selenium import webdriver
 import datetime, time
 import os
+
 """
 Kim Hyeock Jin
 """
@@ -17,8 +18,8 @@ class HomeworkAlarm:
         self.login()
 
     def login(self):
-        if os.path.isfile('loginData.txt') :
-            file = open('loginData.txt', 'r')
+        if os.path.isfile('./loginData.txt') :
+            file = open('./loginData.txt', 'r')
             loginData = file.read().split('\n')
             file.close()
             self.subjectLabel = Label(self.root, text='과목')
@@ -44,11 +45,23 @@ class HomeworkAlarm:
             self.passwordValue.grid(row=1, column=1)
             self.loginBtn = Button(self.root, text='로그인', command=self.clickLogin, height=2)
             self.loginBtn.grid(row=0, column=2, rowspan=2)
+
             self.root.mainloop()
 
+    def clickrefreshBtn(self):
+        if os.path.isfile('./loginData.txt'):
+            self.root.destroy()
+            self.root = Tk()
+            self.root.title("과제 시간표")
+            self.subjectName = []
+            self.homeworkName = []
+            self.endTime = []
+            self.remain = []
+            self.login()
+
     def clickLogout(self):
-        if os.path.isfile('loginData.txt'):
-            os.remove('loginData.txt')
+        if os.path.isfile('./loginData.txt'):
+            os.remove('./loginData.txt')
         self.root.destroy()
         self.root = Tk()
         self.root.title("과제 시간표")
@@ -61,7 +74,7 @@ class HomeworkAlarm:
 
     def clickLogin(self):
         idPw = str(self.idValue.get()) + '\n' + str(self.passwordValue.get())
-        file = open('loginData.txt', 'w')
+        file = open('./loginData.txt', 'w')
         file.write(idPw)
         file.close()
         self.idInput.grid_remove()
@@ -132,8 +145,7 @@ class HomeworkAlarm:
 
 
     def readHomeworkList(self, id, pw):
-        # main_driver = webdriver.Chrome("chromedriver.exe") 크롬창이 뜸.
-        main_driver = webdriver.PhantomJS("phantomjs.exe")
+        main_driver = webdriver.PhantomJS("./phantomjs.exe")
         main_driver.get("http://e-learn.cnu.ac.kr/")
         time.sleep(1)
         main_driver.find_element_by_xpath('// *[ @ id = "pop_login"]').click()
