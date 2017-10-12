@@ -1,15 +1,17 @@
 from tkinter import *
 from selenium import webdriver
-import time
+import datetime, time
 import os
 
 class HomeworkAlarm:
     def __init__(self):
         self.root = Tk()
         self.root.title("과제 시간표")
+        self.homeworkList = []
         self.subjectName = []
         self.homeworkName = []
         self.endTime = []
+        self.remain = []
         self.login()
 
     def login(self):
@@ -48,20 +50,10 @@ class HomeworkAlarm:
         self.root.destroy()
         self.root = Tk()
         self.root.title("과제 시간표")
-        # self.subjectLabel.grid_remove()
-        # self.hwLabel.grid_remove()
-        # self.endLabel.grid_remove()
-        # self.remainLabel.grid_remove()
-        # self.logoutBtn.grid_remove()
-        # i =1
-        # while i < self.homeworkCount:
-        #     Label(self.subjectName[i]).grid_remove()
-        #     Label(self.homeworkName[i]).grid_remove()
-        #     Label(self.endTime[i]).grid_remove()
-        #     i+=1
         self.subjectName = []
         self.homeworkName = []
         self.endTime = []
+        self.remain = []
         self.login()
 
 
@@ -78,8 +70,33 @@ class HomeworkAlarm:
         self.login()
 
     def refreshTime(self):
-        now = time.localtime()
-        self.nowTime = str(now.tm_mon) + str(now.tm_mday) + str(now.tm_hour) + str(now.tm_min) + str(now.tm_sec)
+
+        now = datetime.datetime.now()
+        nowDay = now.date()
+        year = now.year
+        remainDays = []
+        for homeworkData in self.homeworkList:
+            print((datetime.date(int(year), int(homeworkData[2][1]), int(homeworkData[2][2]))
+                               - nowDay).days)
+            remainDays.append((datetime.date(int(year), int(homeworkData[2][1]), int(homeworkData[2][2]))
+                               - nowDay).days)
+        i = 0
+
+        for homeworkData in self.homeworkList:
+            if remainDays[i] > 1:
+                homeworkData.append(str(remainDays[i]) +' 일 전..')
+            else :
+                remainTime = ((24+int(homeworkData[3][0]) - now.hour)%24) * 60 + int(homeworkData[3][1]) -now.minute
+                remainTime = int((remainTime)/60)
+                if remainTime > 24:
+                    homeworkData.append('1 일 전..')
+                elif remainTime > 0:
+                    homeworkData.append(str(remainTime)+' 시간 전..')
+                else :
+                    homeworkData.append('1 시간 이내..')
+            i += 1
+
+
 
     def homeworkListSort(self):
         i = 0
@@ -97,19 +114,20 @@ class HomeworkAlarm:
             i += 1
 
     def refreshHomeworkList(self):
+        self.refreshTime()
         self.homeworkListSort()
         i = 0
         for homeworkData in self.homeworkList:
-            timeInfo = '20' + homeworkData[2][0] + '년 ' + homeworkData[2][1]  + '월 ' + homeworkData[2][2] + '일' \
+            timeInfo = '20' + homeworkData[2][0] + '년 ' + homeworkData[2][1]  + '월 ' + homeworkData[2][2] + '일 ' \
                        + homeworkData[3][0] + '시 ' + homeworkData[3][1] + '분까지...'
             self.subjectName.append(Label(self.root, text=homeworkData[0]))
             self.homeworkName.append(Label(self.root, text=homeworkData[1]))
             self.endTime.append(Label(self.root, text=timeInfo))
-            # self.remain.append(Label(self.root, text=homeworkData[3]))
+            self.remain.append(Label(self.root, text=homeworkData[4]))
             self.subjectName[i].grid(row=i + 1, column=0)
             self.homeworkName[i].grid(row=i + 1, column=1)
             self.endTime[i].grid(row=i + 1, column=2)
-            # self.remain[i].grid(row=i + 1, column=3)
+            self.remain[i].grid(row=i + 1, column=3)
             i += 1
 
 
@@ -118,7 +136,7 @@ class HomeworkAlarm:
         # main_driver = webdriver.Chrome("chromedriver.exe") 크롬창이 뜸.
         main_driver = webdriver.PhantomJS("phantomjs.exe")
         main_driver.get("http://e-learn.cnu.ac.kr/")
-
+        time.sleep(1)
         main_driver.find_element_by_xpath('// *[ @ id = "pop_login"]').click()
         time.sleep(1)
         main_driver.find_element_by_xpath('//*[@id="id"]').send_keys(id)
@@ -129,6 +147,7 @@ class HomeworkAlarm:
         # user = Label(root, text=userName)
         # user.pack()
         main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
+        time.sleep(1)
         self.homeworkList = []
 
 
