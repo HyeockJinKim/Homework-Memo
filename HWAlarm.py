@@ -270,6 +270,7 @@ class HomeworkAlarm:
                     return True
                 else:
                     return False
+            main_driver.close()
 
 def main():
     HW = HomeworkAlarm()
