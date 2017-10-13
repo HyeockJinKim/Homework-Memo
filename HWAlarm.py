@@ -261,6 +261,7 @@ class HomeworkAlarm:
 
                 main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
         except Exception:
+            main_driver.close()
             if self.homeworkCount != 0:
                 if not self.equalHomeworkList():
                     self.homeworkFileList = self.homeworkList
@@ -270,7 +271,7 @@ class HomeworkAlarm:
                     return True
                 else:
                     return False
-            main_driver.close()
+
 
 def main():
     HW = HomeworkAlarm()
