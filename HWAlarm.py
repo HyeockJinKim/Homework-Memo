@@ -1,11 +1,14 @@
+import codecs
 from tkinter import *
 from selenium import webdriver
 import datetime, time
+import threading
 import os
 import sys
+import pickle
 import win32com.shell.shell as shell
 ASADMIN = 'asadmin'
-
+threads = []
 def uac_require():
     try:
         if sys.argv[-1] != ASADMIN:
@@ -25,17 +28,28 @@ class HomeworkAlarm:
         self.root = Tk()
         self.root.title("과제 시간표")
         self.homeworkList = []
+        self.homeworkFileList = []
+        self.loginData = []
         self.subjectName = []
         self.homeworkName = []
         self.endTime = []
         self.remain = []
         self.login()
+        autoThread = threading.Thread(target=self.autoHWloader)
+        autoThread.start()
+        threads.append(autoThread)
 
+
+    # login 함수, login
     def login(self):
-        if os.path.isfile('./loginData.txt') :
-            file = open('./loginData.txt', 'r')
-            loginData = file.read().split('\n')
+        if os.path.isfile('./loginData.bin'):
+            decoder = codecs.getdecoder('hex')
+            file = open('./loginData.bin', 'rb')
+            idpw = bytes(decoder(file.read())[0]).decode()
             file.close()
+            idpwValue = idpw.split('\n')
+            self.loginData.append(idpwValue[0])
+            self.loginData.append(idpwValue[1])
             self.subjectLabel = Label(self.root, text='과목')
             self.subjectLabel.grid(row=0, column=0)
             self.hwLabel = Label(self.root, text='과제 이름')
@@ -46,7 +60,7 @@ class HomeworkAlarm:
             self.remainLabel.grid(row=0, column=3)
             self.logoutBtn = Button(self.root, text='로그아웃', command=self.clickLogout)
             self.logoutBtn.grid(row=0, column=4)
-            self.readHomeworkList(loginData[0], loginData[1])
+            self.readHomeworkFileList()
 
         else:
             self.idInput = Label(self.root, text='아이디')
@@ -55,41 +69,30 @@ class HomeworkAlarm:
             self.idValue.grid(row=0, column=1)
             self.passwordInput = Label(self.root, text='비밀번호')
             self.passwordInput.grid(row=1, column=0)
-            self.passwordValue = Entry(self.root)
+            self.passwordValue = Entry(self.root, show='*')
             self.passwordValue.grid(row=1, column=1)
             self.loginBtn = Button(self.root, text='로그인', command=self.clickLogin, height=2)
             self.loginBtn.grid(row=0, column=2, rowspan=2)
 
             self.root.mainloop()
 
-    def clickrefreshBtn(self):
-        if os.path.isfile('./loginData.txt'):
-            self.root.destroy()
-            self.root = Tk()
-            self.root.title("과제 시간표")
-            self.subjectName = []
-            self.homeworkName = []
-            self.endTime = []
-            self.remain = []
-            self.login()
-
     def clickLogout(self):
-        if os.path.isfile('./loginData.txt'):
-            os.remove('./loginData.txt')
+        if os.path.isfile('./loginData.bin'):
+            os.remove('./loginData.bin')
         self.root.destroy()
         self.root = Tk()
         self.root.title("과제 시간표")
-        self.subjectName = []
-        self.homeworkName = []
-        self.endTime = []
-        self.remain = []
+        self.subjectName.clear()
+        self.homeworkName.clear()
+        self.endTime.clear()
+        self.remain.clear()
         self.login()
 
-
     def clickLogin(self):
-        idPw = str(self.idValue.get()) + '\n' + str(self.passwordValue.get())
-        file = open('./loginData.txt', 'w')
-        file.write(idPw)
+        encoder = codecs.getencoder('hex')
+        idpw = encoder(str(self.idValue.get() + '\n' +self.passwordValue.get()).encode())[0]
+        file = open('./loginData.bin', 'wb')
+        file.write(idpw)
         file.close()
         self.idInput.grid_remove()
         self.idValue.grid_remove()
@@ -112,7 +115,8 @@ class HomeworkAlarm:
             if remainDays[i] > 1:
                 homeworkData.append(str(remainDays[i]) +' 일 전..')
             else :
-                remainTime = ((24+int(homeworkData[3][0]) - now.hour)%24) * 60 + int(homeworkData[3][1]) -now.minute
+
+                remainTime = ((remainDays[i]*24+int(homeworkData[3][0]) - now.hour)) * 60 + int(homeworkData[3][1]) -now.minute
                 remainTime = int((remainTime)/60)
                 if remainTime > 24:
                     homeworkData.append('1 일 전..')
@@ -137,7 +141,27 @@ class HomeworkAlarm:
                 j -= 1
             i += 1
 
-    def refreshHomeworkList(self):
+    def autoHWloader(self):
+        now = datetime.time.now()
+        minut = (now.minute + 5) * 60
+        hour = 3600
+        time.sleep(minut)
+        while True:
+            if self.readHomeworkList():
+                i = 0
+                while i < self.homeworkCount:
+                    Label(self.subjectName[i]).grid_remove()
+                    Label(self.homeworkName[i]).grid_remove()
+                    Label(self.endTime[i]).grid_remove()
+                    Label(self.remain[i]).grid_remove()
+                self.subjectName.clear()
+                self.homeworkName.clear()
+                self.endTime.clear()
+                self.remain.clear()
+                self.readHomeworkFileList()
+            time.sleep(hour)
+
+    def gridHomeworkList(self):
         self.refreshTime()
         self.homeworkListSort()
         i = 0
@@ -153,25 +177,38 @@ class HomeworkAlarm:
             self.endTime[i].grid(row=i + 1, column=2)
             self.remain[i].grid(row=i + 1, column=3)
             i += 1
+        self.root.mainloop()
 
-    def readHomeworkList(self, id, pw):
+    def readHomeworkFileList(self):
+        if not os.path.isfile('./'+self.loginData[0]+'.bin'):
+            self.readHomeworkList()
+        file = open('./'+self.loginData[0]+'.bin', 'rb')
+        self.homeworkFileList = pickle.load(file)
+        file.close()
+        self.homeworkList = self.homeworkFileList
+        self.gridHomeworkList()
+
+    def equalHomeworkList(self):
+        if not os.path.isfile('./' + self.loginData[0] + '.bin'):
+            return False
+        if self.homeworkFileList == self.homeworkList:
+            return True
+        else:
+            return False
+
+
+    def readHomeworkList(self):
         main_driver = webdriver.PhantomJS("./phantomjs.exe")
         main_driver.get("http://e-learn.cnu.ac.kr/")
         time.sleep(1)
         main_driver.find_element_by_xpath('// *[ @ id = "pop_login"]').click()
         time.sleep(1)
-        main_driver.find_element_by_xpath('//*[@id="id"]').send_keys(id)
-        main_driver.find_element_by_xpath('//*[@id="pass"]').send_keys(pw+'\n')
+        main_driver.find_element_by_xpath('//*[@id="id"]').send_keys(self.loginData[0])
+        main_driver.find_element_by_xpath('//*[@id="pass"]').send_keys(self.loginData[1]+'\n')
         time.sleep(5)  # 로그인 지연 시간
-
-        # userName = main_driver.find_element_by_xpath('// *[ @ id = "header_top"] / p / span / strong').text
-        # user = Label(root, text=userName)
-        # user.pack()
         main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
         time.sleep(1)
-        self.homeworkList = []
-
-
+        self.homeworkList.clear()
         self.homeworkCount = 0
         i = 1
         try:
@@ -211,8 +248,14 @@ class HomeworkAlarm:
                 main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
         except Exception:
             if self.homeworkCount != 0:
-                self.refreshHomeworkList()
-            self.root.mainloop()
+                if not self.equalHomeworkList():
+                    self.homeworkFileList = self.homeworkList
+                    file = open('./'+self.loginData[0]+'.bin', 'wb')
+                    pickle.dump(self.homeworkFileList, file)
+                    file.close()
+                    return True
+                else:
+                    return False
 
 def main():
     HW = HomeworkAlarm()
@@ -225,3 +268,4 @@ if __name__ == '__main__':
         root = Tk()
         root.title("과제 시간표")
         Label(root, text='관리자 권한 받기 실패').pack()
+        root.mainloop()
