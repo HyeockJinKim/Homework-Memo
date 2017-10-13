@@ -1,6 +1,8 @@
+import codecs
 from tkinter import *
 from selenium import webdriver
 import datetime, time
+import threading
 import os
 import sys
 import win32com.shell.shell as shell
@@ -30,12 +32,15 @@ class HomeworkAlarm:
         self.endTime = []
         self.remain = []
         self.login()
+        self.autoHWloader()
 
     def login(self):
-        if os.path.isfile('./loginData.txt') :
-            file = open('./loginData.txt', 'r')
-            loginData = file.read().split('\n')
+        if os.path.isfile('./loginData.bin') :
+            decoder = codecs.getdecoder('hex')
+            file = open('./loginData.bin', 'rb')
+            idpw = bytes(decoder(file.read())[0]).decode()
             file.close()
+            loginData = idpw.split('\n')
             self.subjectLabel = Label(self.root, text='과목')
             self.subjectLabel.grid(row=0, column=0)
             self.hwLabel = Label(self.root, text='과제 이름')
@@ -55,27 +60,16 @@ class HomeworkAlarm:
             self.idValue.grid(row=0, column=1)
             self.passwordInput = Label(self.root, text='비밀번호')
             self.passwordInput.grid(row=1, column=0)
-            self.passwordValue = Entry(self.root)
+            self.passwordValue = Entry(self.root, show='*')
             self.passwordValue.grid(row=1, column=1)
             self.loginBtn = Button(self.root, text='로그인', command=self.clickLogin, height=2)
             self.loginBtn.grid(row=0, column=2, rowspan=2)
 
             self.root.mainloop()
 
-    def clickrefreshBtn(self):
-        if os.path.isfile('./loginData.txt'):
-            self.root.destroy()
-            self.root = Tk()
-            self.root.title("과제 시간표")
-            self.subjectName = []
-            self.homeworkName = []
-            self.endTime = []
-            self.remain = []
-            self.login()
-
     def clickLogout(self):
-        if os.path.isfile('./loginData.txt'):
-            os.remove('./loginData.txt')
+        if os.path.isfile('./loginData.bin'):
+            os.remove('./loginData.bin')
         self.root.destroy()
         self.root = Tk()
         self.root.title("과제 시간표")
@@ -87,9 +81,10 @@ class HomeworkAlarm:
 
 
     def clickLogin(self):
-        idPw = str(self.idValue.get()) + '\n' + str(self.passwordValue.get())
-        file = open('./loginData.txt', 'w')
-        file.write(idPw)
+        encoder = codecs.getencoder('hex')
+        idpw = encoder(str(self.idValue.get() + '\n' +self.passwordValue.get()).encode())[0]
+        file = open('./loginData.bin', 'wb')
+        file.write(idpw)
         file.close()
         self.idInput.grid_remove()
         self.idValue.grid_remove()
@@ -137,7 +132,14 @@ class HomeworkAlarm:
                 j -= 1
             i += 1
 
-    def refreshHomeworkList(self):
+    def autoHWloader(self):
+        now = datetime.datetime.now()
+        minut = now.minute
+        hour = 3600 + 60 * minut
+        while True:
+
+
+    def girdHomeworkList(self):
         self.refreshTime()
         self.homeworkListSort()
         i = 0
@@ -153,6 +155,7 @@ class HomeworkAlarm:
             self.endTime[i].grid(row=i + 1, column=2)
             self.remain[i].grid(row=i + 1, column=3)
             i += 1
+
 
     def readHomeworkList(self, id, pw):
         main_driver = webdriver.PhantomJS("./phantomjs.exe")
@@ -211,7 +214,7 @@ class HomeworkAlarm:
                 main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
         except Exception:
             if self.homeworkCount != 0:
-                self.refreshHomeworkList()
+                self.girdHomeworkList()
             self.root.mainloop()
 
 def main():
