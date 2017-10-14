@@ -1,7 +1,9 @@
 import codecs
 from tkinter import *
 from selenium import webdriver
-import datetime, time
+from functools import partial
+import datetime
+import time
 import threading
 import os
 import sys
@@ -9,6 +11,8 @@ import pickle
 import win32com.shell.shell as shell
 ASADMIN = 'asadmin'
 threads = []
+
+
 def uac_require():
     try:
         if sys.argv[-1] != ASADMIN:
@@ -23,214 +27,261 @@ def uac_require():
 """
 Kim Hyeock Jin
 """
+
+
 class HomeworkAlarm:
     def __init__(self):
         self.root = Tk()
         self.root.title("과제 시간표")
         self.root.configure(background='white')
-        self.homeworkList = []
-        self.homeworkFileList = []
-        self.loginData = []
-        self.subjectName = []
-        self.homeworkName = []
-        self.endTime = []
+        self.homework_list = []
+        self.homework_file_list = []
+        self.login_data = []
+        self.subject_name = []
+        self.homework_name = []
+        self.end_time = []
         self.remain = []
+        self.submit_btn = []
+        self.submit = []
         self.login()
-        autoThread = threading.Thread(target=self.autoHWloader)
-        autoThread.start()
-        threads.append(autoThread)
 
 
-    # login 함수, login
     def login(self):
         if os.path.isfile('./loginData.bin'):
             decoder = codecs.getdecoder('hex')
             file = open('./loginData.bin', 'rb')
-            idpw = bytes(decoder(file.read())[0]).decode()
+            id_pw_value = bytes(decoder(file.read())[0]).decode()
             file.close()
-            idpwValue = idpw.split('\n')
-            self.loginData.append(idpwValue[0])
-            self.loginData.append(idpwValue[1])
-            self.subjectLabel = Label(self.root, text='과목')
-            self.subjectLabel.configure(background='white')
-            self.subjectLabel.grid(row=0, column=0)
-            self.hwLabel = Label(self.root, text='과제 이름')
-            self.hwLabel.configure(background='white')
-            self.hwLabel.grid(row=0, column=1)
-            self.endLabel = Label(self.root, text='제출 기한')
-            self.endLabel.configure(background='white')
-            self.endLabel.grid(row=0, column=2)
-            self.remainLabel = Label(self.root, text='남은 기간')
-            self.remainLabel.configure(background='white')
-            self.remainLabel.grid(row=0, column=3)
-            self.logoutBtn = Button(self.root, text='로그아웃', command=self.clickLogout)
-            self.logoutBtn.configure(background='white')
-            self.logoutBtn.grid(row=0, column=4)
-            self.readHomeworkFileList()
+            id_pw_valueValue = id_pw_value.split('\n')
+            self.login_data.append(id_pw_valueValue[0])
+            self.login_data.append(id_pw_valueValue[1])
+            self.subject_label = Label(self.root, text='과목', font='Verdana 10 bold', background='white')
+            self.subject_label.grid(row=0, column=0)
+            self.hw_label = Label(self.root, text='과제 이름', font='Verdana 10 bold', background='white')
+            self.hw_label.grid(row=0, column=1)
+            self.end_label = Label(self.root, text='제출 기한', font='Verdana 10 bold', background='white')
+            self.end_label.grid(row=0, column=2)
+            self.remain_label = Label(self.root, text='남은 기간', font='Verdana 10 bold', background='white')
+            self.remain_label.grid(row=0, column=3)
+            self.submit_label = Label(self.root, text='제출 여부', font='Verdana 10 bold', background='white')
+            self.submit_label.grid(row=0, column=4)
+            self.logout_btn = Button(self.root, text='로그아웃', command=self.click_logout, background='white')
+            self.logout_btn.grid(row=0, column=5)
+            self.read_homework_file()
+
 
         else:
-            self.idInput = Label(self.root, text='아이디')
-            self.idInput.configure(background='white')
-            self.idInput.grid(row=0, column=0)
-            self.idValue = Entry(self.root)
-            self.idValue.grid(row=0, column=1)
-            self.passwordInput = Label(self.root, text='비밀번호')
-            self.passwordInput.configure(background='white')
-            self.passwordInput.grid(row=1, column=0)
-            self.passwordValue = Entry(self.root, show='*')
-            self.passwordValue.grid(row=1, column=1)
-            self.loginBtn = Button(self.root, text='로그인', command=self.clickLogin, height=2)
-            self.loginBtn.configure(background='white')
-            self.loginBtn.grid(row=0, column=2, rowspan=2)
+            self.id_input = Label(self.root, text='아이디', font='Verdana 10 bold')
+            self.id_input.configure(background='white')
+            self.id_input.grid(row=0, column=0)
+            self.id_value = Entry(self.root)
+            self.id_value.grid(row=0, column=1)
+            self.password_input = Label(self.root, text='비밀번호', font='Verdana 10 bold')
+            self.password_input.configure(background='white')
+            self.password_input.grid(row=1, column=0)
+            self.password_value = Entry(self.root, show='*')
+            self.password_value.grid(row=1, column=1)
+            self.login_btn = Button(self.root, text='로그인', command=self.click_login, height=2, font='Verdana 10 bold')
+            self.login_btn.configure(background='white')
+            self.login_btn.grid(row=0, column=2, rowspan=2)
 
             self.root.mainloop()
 
-    def clickLogout(self):
+    def click_logout(self):
         if os.path.isfile('./loginData.bin'):
             os.remove('./loginData.bin')
         self.root.destroy()
         self.root = Tk()
         self.root.title("과제 시간표")
         self.root.configure(background='white')
-        self.subjectName.clear()
-        self.homeworkName.clear()
-        self.endTime.clear()
+        self.subject_name.clear()
+        self.homework_name.clear()
+        self.end_time.clear()
         self.remain.clear()
+        self.submit_btn.clear()
+        self.submit.clear()
         self.login()
 
-    def clickLogin(self):
+    def click_login(self):
         encoder = codecs.getencoder('hex')
-        idpw = encoder(str(self.idValue.get() + '\n' +self.passwordValue.get()).encode())[0]
+        id_pw_value = encoder(str(self.id_value.get() + '\n' +self.password_value.get()).encode())[0]
         file = open('./loginData.bin', 'wb')
-        file.write(idpw)
+        file.write(id_pw_value)
         file.close()
-        self.idInput.grid_remove()
-        self.idValue.grid_remove()
-        self.passwordInput.grid_remove()
-        self.passwordValue.grid_remove()
-        self.loginBtn.grid_remove()
+        self.id_input.destroy()
+        self.id_value.destroy()
+        self.password_input.destroy()
+        self.password_value.destroy()
+        self.login_btn.destroy()
         self.login()
 
-    def refreshTime(self):
+    def click_submit(self, index):
+        print(self.homework_list)
+        print(index)
+        subject_name = self.homework_list[index][0]
+        homework_name = self.homework_list[index][1]
+        submit_driver = webdriver.Chrome("./chromedriver.exe")
+        submit_driver.get("http://e-learn.cnu.ac.kr/")
+        time.sleep(1)
+        submit_driver.find_element_by_xpath('// *[ @ id = "pop_login"]').click()
+        time.sleep(1)
+        submit_driver.find_element_by_xpath('//*[@id="id"]').send_keys(self.login_data[0])
+        submit_driver.find_element_by_xpath('//*[@id="pass"]').send_keys(self.login_data[1] + '\n')
+        time.sleep(5)  # 로그인 지연 시간
+        submit_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
+        time.sleep(1)
+        i = 1
+        try:
+            while True:
+                if subject_name == str(submit_driver.find_element_by_xpath('//*[@id="rows1"]/table/tbody/tr[' + str(i) + ']/td[4]/span[1]/a').text).split()[0]:
+                    submit_driver.find_element_by_xpath(
+                        '// *[ @ id = "rows1"] / table / tbody / tr[' + str(i) + '] / td[4] / span[1] / a').click()
+                    time.sleep(1)
+                    submit_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
+                    time.sleep(1)
+                    break
+                i += 1
+        except Exception:
+            return
+        i = 1
+        try:
+            while True:
+                if homework_name == submit_driver.find_element_by_xpath(
+                    '// *[ @ id = "con"] / table[2] / tbody / tr[' + str(i) + '] / td[1] / strong / a').text:
+                    submit_driver.find_element_by_xpath(
+                        '// *[ @ id = "con"] / table[2] / tbody / tr[' + str(i) + '] / td[1] / strong / a').click()
+                i += 1
+        except Exception:
+            return
+
+    def refresh_time(self):
         now = datetime.datetime.now()
-        nowDay = now.date()
+        now_day = now.date()
         year = now.year
-        remainDays = []
-        for homeworkData in self.homeworkList:
-            remainDays.append((datetime.date(int(year), int(homeworkData[2][1]), int(homeworkData[2][2]))
-                               - nowDay).days)
+        remain_days = []
+        for homework_data in self.homework_list:
+            remain_days.append((datetime.date(int(year), int(homework_data[2][1]), int(homework_data[2][2]))
+                               - now_day).days)
         i = 0
 
-        for homeworkData in self.homeworkList:
-            if remainDays[i] > 1:
-                homeworkData.append(str(remainDays[i]) +' 일 전..')
+        for homework_data in self.homework_list:
+            if remain_days[i] > 1:
+                homework_data.append(str(remain_days[i]) +' 일 전..')
             else :
 
-                remainTime = ((remainDays[i]*24+int(homeworkData[3][0]) - now.hour)) * 60 + int(homeworkData[3][1]) -now.minute
-                remainTime = int((remainTime)/60)
-                if remainTime > 24:
-                    homeworkData.append('1 일 전..')
-                elif remainTime > 0:
-                    homeworkData.append(str(remainTime)+' 시간 전..')
+                remain_time = ((remain_days[i]*24+int(homework_data[3][0]) - now.hour)) * 60 + int(homework_data[3][1]) -now.minute
+                remain_time = int((remain_time)/60)
+                if remain_time > 24:
+                    homework_data.append('1 일 전..')
+                elif remain_time > 0:
+                    homework_data.append(str(remain_time)+' 시간 전..')
                 else :
-                    homeworkData.append('1 시간 이내..')
+                    homework_data.append('1 시간 이내..')
             i += 1
 
-    def homeworkListSort(self):
+    def homework_list_sort(self, list):
         i = 0
-        hwTime = []
-        for homeworkData in self.homeworkList:
-            hwTime.append(int(homeworkData[2][1] + homeworkData[2][2] + homeworkData[3][0] + homeworkData[3][1]))
+        homework_time = []
+        for homework_data in list:
+            homework_time.append(int(homework_data[2][1] + homework_data[2][2] + homework_data[3][0] + homework_data[3][1]))
             i += 1
         i = 1
-        while i < len(hwTime):
+        while i < len(homework_time):
             j = i
-            while hwTime[j] < hwTime[j-1] and j > 0:
-                hwTime[j-1], hwTime[j] = hwTime[j], hwTime[j-1]
-                self.homeworkList[j-1], self.homeworkList[j] = self.homeworkList[j], self.homeworkList[j-1]
+            while homework_time[j] < homework_time[j-1] and j > 0:
+                homework_time[j-1], homework_time[j] = homework_time[j], homework_time[j-1]
+                list[j-1], list[j] = list[j], list[j-1]
                 j -= 1
             i += 1
+        return list
 
-    def autoHWloader(self):
-        now = datetime.time.now()
-        minut = (now.minute + 5) * 60
-        hour = 3600
-        time.sleep(minut)
-        while True:
-            if self.readHomeworkList():
-                i = 0
-                while i < self.homeworkCount:
-                    Label(self.subjectName[i]).grid_remove()
-                    Label(self.homeworkName[i]).grid_remove()
-                    Label(self.endTime[i]).grid_remove()
-                    Label(self.remain[i]).grid_remove()
-                self.subjectName.clear()
-                self.homeworkName.clear()
-                self.endTime.clear()
-                self.remain.clear()
-                self.readHomeworkFileList()
-            time.sleep(hour)
+    def auto_homework_loader(self):
+        if self.read_homework_list():
+            print("가져오자")
+            i = 0
+            count = len(self.subject_name)
+            while i < count:
+                Label(self.subject_name[i]).destroy()
+                Label(self.homework_name[i]).destroy()
+                Label(self.end_time[i]).destroy()
+                Label(self.remain[i]).destroy()
+                Label(self.submit[i]).destroy()
+                Button(self.submit_btn[i]).destroy()
+                i += 1
+            self.subject_name.clear()
+            self.homework_name.clear()
+            self.end_time.clear()
+            self.remain.clear()
+            self.submit.clear()
+            self.submit_btn.clear()
+        else:
+            print("안받음")
+            time.sleep(3600)
+        self.root.after(0, self.read_homework_file)
 
-    def gridHomeworkList(self):
-        self.refreshTime()
-        self.homeworkListSort()
+    def grid_homework_list(self):
+        self.refresh_time()
         i = 0
-        for homeworkData in self.homeworkList:
-            timeInfo = '20' + homeworkData[2][0] + '년 ' + homeworkData[2][1]  + '월 ' + homeworkData[2][2] + '일 ' \
-                       + homeworkData[3][0] + '시 ' + homeworkData[3][1] + '분까지...'
-            self.subjectName.append(Label(self.root, text=homeworkData[0]))
-            self.homeworkName.append(Label(self.root, text=homeworkData[1]))
-            self.endTime.append(Label(self.root, text=timeInfo))
-            self.remain.append(Label(self.root, text=homeworkData[4]))
-            self.subjectName[i].configure(background='white')
-            self.subjectName[i].grid(row=i + 1, column=0)
-            self.homeworkName[i].configure(background='white')
-            self.homeworkName[i].grid(row=i + 1, column=1)
-            self.endTime[i].configure(background='white')
-            self.endTime[i].grid(row=i + 1, column=2)
-            self.remain[i].configure(background='white')
+
+        for homework_data in self.homework_list:
+            time_info = '20' + homework_data[2][0] + '년 ' + homework_data[2][1]  + '월 ' + homework_data[2][2] + '일 ' \
+                       + homework_data[3][0] + '시 ' + homework_data[3][1] + '분까지...'
+            self.subject_name.append(Label(self.root, text=homework_data[0], background='white'))
+            self.homework_name.append(Label(self.root, text=homework_data[1], background='white'))
+            self.end_time.append(Label(self.root, text=time_info, background='white'))
+            self.remain.append(Label(self.root, text=homework_data[5], background='white'))
+            self.submit.append(Label(self.root, text=homework_data[4], background='white'))
+            action = partial(self.click_submit, i)
+            self.submit_btn.append(Button(self.root, text='제출하기', command=action, background='red', foreground='white'))
+            self.subject_name[i].grid(row=i + 1, column=0)
+            self.homework_name[i].grid(row=i + 1, column=1)
+            self.end_time[i].grid(row=i + 1, column=2)
             self.remain[i].grid(row=i + 1, column=3)
+            self.submit[i].grid(row=i + 1, column=4)
+            self.submit_btn[i].grid(row=i + 1, column=5)
+
             i += 1
+        self.t = threading.Thread(target=self.auto_homework_loader)
+        self.t.start()
         self.root.mainloop()
 
-    def readHomeworkFileList(self):
-        if not os.path.isfile('./'+self.loginData[0]+'.bin'):
-            self.readHomeworkList()
-        file = open('./'+self.loginData[0]+'.bin', 'rb')
-        self.homeworkFileList = pickle.load(file)
-        file.close()
-        self.homeworkList = self.homeworkFileList
-        self.gridHomeworkList()
+    def read_homework_file(self):
+        if os.path.isfile('./'+self.login_data[0]+'.bin'):
+            file = open('./' + self.login_data[0] + '.bin', 'rb')
+            self.homework_file_list = pickle.load(file)
+            file.close()
+            self.homework_list = self.homework_file_list
+        else:
+            self.read_homework_list()
+        self.grid_homework_list()
 
-    def equalHomeworkList(self):
-        if not os.path.isfile('./' + self.loginData[0] + '.bin'):
+    def equal_homework_list(self):
+        if not os.path.isfile('./' + self.login_data[0] + '.bin'):
             return False
-        if self.homeworkFileList == self.homeworkList:
+        if self.homework_file_list == self.homework_list:
             return True
         else:
             return False
 
-
-    def readHomeworkList(self):
+    def read_homework_list(self):
         main_driver = webdriver.PhantomJS("./phantomjs.exe")
         main_driver.get("http://e-learn.cnu.ac.kr/")
         time.sleep(1)
         main_driver.find_element_by_xpath('// *[ @ id = "pop_login"]').click()
         time.sleep(1)
-        main_driver.find_element_by_xpath('//*[@id="id"]').send_keys(self.loginData[0])
-        main_driver.find_element_by_xpath('//*[@id="pass"]').send_keys(self.loginData[1]+'\n')
+        main_driver.find_element_by_xpath('//*[@id="id"]').send_keys(self.login_data[0])
+        main_driver.find_element_by_xpath('//*[@id="pass"]').send_keys(self.login_data[1]+'\n')
         time.sleep(5)  # 로그인 지연 시간
         main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
-        time.sleep(1)
-        self.homeworkList.clear()
-        self.homeworkCount = 0
+        hw_list = []
+        self.homework_count = 0
         i = 1
         try:
             while True:
+                time.sleep(1)
                 j = 1
-                subjectName = main_driver.find_element_by_xpath(
-                    '// *[ @ id = "rows1"] / table / tbody / tr[' + str(i) + '] / td[4] / span[1] / a').text
-                subjectName = subjectName.split()[0]
+                subject_name = str(main_driver.find_element_by_xpath(
+                    '//*[@id="rows1"]/table/tbody/tr[' + str(i) + ']/td[4]/span[1]/a').text).split()[0]
                 main_driver.find_element_by_xpath(
                     '// *[ @ id = "rows1"] / table / tbody / tr[' + str(i) + '] / td[4] / span[1] / a').click()
 
@@ -239,52 +290,58 @@ class HomeworkAlarm:
                 time.sleep(1)
                 try:
                     while True:
-                        if main_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(
-                                j) + '] / td[7]').text == "진행" \
-                                and main_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(
-                                    j) + '] / td[3]').text != '제출':
-                            homeworkName = main_driver.find_element_by_xpath(
+                        if main_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[7]').text == "진행":
+                            homework_name = main_driver.find_element_by_xpath(
                                 '// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[1] / strong / a').text
-                            homeworkTime = main_driver.find_element_by_xpath(
+                            homework_time = main_driver.find_element_by_xpath(
                                 '// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[2] / a').text
-                            hwTime = homeworkTime.split()
-                            date = hwTime[3].split('/')
-                            endTime = hwTime[4].split(':')
-                            self.homeworkInfo = [subjectName , homeworkName , date, endTime]
-                            self.homeworkList.append(self.homeworkInfo)
-                            self.homeworkCount += 1
+                            homework_time = homework_time.split()
+                            date = homework_time[3].split('/')
+                            end_time = homework_time[4].split(':')
+                            if main_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[3]').text != '제출':
+                                submit = '미제출'
+                            else:
+                                submit = '제출'
+                            homework_info = [subject_name , homework_name , date, end_time, submit]
+                            hw_list.append(homework_info)
+                            self.homework_count += 1
 
                         j += 1
                         time.sleep(1)
                 except Exception:
                     i += 1
-
                 main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
         except Exception:
             main_driver.close()
-            if self.homeworkCount != 0:
-                if not self.equalHomeworkList():
-                    self.homeworkFileList = self.homeworkList
-                    file = open('./'+self.loginData[0]+'.bin', 'wb')
-                    pickle.dump(self.homeworkFileList, file)
+            hw_list = self.homework_list_sort(hw_list)
+            if not self.homework_list == hw_list:
+                self.homework_list = hw_list
+            if self.homework_count != 0:
+                if not self.equal_homework_list():
+                    self.homework_file_list = self.homework_list
+                    file = open('./'+self.login_data[0]+'.bin', 'wb')
+                    pickle.dump(self.homework_file_list, file)
                     file.close()
                     return True
                 else:
                     return False
+            else:
+                print('sry')
+                return False
 
 
 def main():
-    HW = HomeworkAlarm()
+    homework = HomeworkAlarm()
 
 
 if __name__ == '__main__':
-    if uac_require():# 관리자 권한
-        main()
-    else:
-        root = Tk()
-        root.title("과제 시간표")
-        root.configure(background='white')
-        label = Label(root, text='관리자 권한 받기 실패')
-        label.configure(background='white')
-        label.pack()
-        root.mainloop()
+    # if uac_require():# 관리자 권한
+    main()
+    # else:
+    #     root = Tk()
+    #     root.title("과제 시간표")
+    #     root.configure(background='white')
+    #     label = Label(root, text='관리자 권한 받기 실패')
+    #     label.configure(background='white')
+    #     label.pack()
+    #     root.mainloop()
