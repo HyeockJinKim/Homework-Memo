@@ -10,7 +10,6 @@ import sys
 import pickle
 import win32com.shell.shell as shell
 ASADMIN = 'asadmin'
-threads = []
 
 
 def uac_require():
@@ -43,6 +42,7 @@ class HomeworkAlarm:
         self.remain = []
         self.submit_btn = []
         self.submit = []
+        threading.Thread(target=self.auto_load_thread).start()
         self.login()
 
 
@@ -69,7 +69,6 @@ class HomeworkAlarm:
             self.logout_btn.grid(row=0, column=5)
             self.read_homework_file()
             self.root.mainloop()
-
 
         else:
             self.id_input = Label(self.root, text='아이디', font='Verdana 10 bold')
@@ -194,6 +193,13 @@ class HomeworkAlarm:
             i += 1
         return list
 
+    def auto_load_thread(self):
+        while True:
+            t = threading.Thread(target=self.auto_homework_loader)
+            t.start()
+            t.join()
+            time.sleep(3600)
+
     def auto_homework_loader(self):
         if self.read_homework_list():
             i = 0
@@ -212,11 +218,8 @@ class HomeworkAlarm:
             self.remain.clear()
             self.submit.clear()
             self.submit_btn.clear()
-        else:
-            time.sleep(3600)
 
         self.root.after(0, self.read_homework_file)
-
 
     def grid_homework_list(self):
         self.refresh_time()
@@ -240,8 +243,6 @@ class HomeworkAlarm:
             self.submit_btn[i].grid(row=i + 1, column=5)
 
             i += 1
-        self.t = threading.Thread(target=self.auto_homework_loader)
-        self.t.start()
 
     def read_homework_file(self):
         if os.path.isfile('./'+self.login_data[0]+'.bin'):
@@ -273,6 +274,7 @@ class HomeworkAlarm:
             time.sleep(7)  # 로그인 지연 시간
             main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
         except Exception:
+            main_driver.close()
             return False
         hw_list = []
         i = 1
@@ -290,7 +292,7 @@ class HomeworkAlarm:
                 time.sleep(2)
                 try:
                     while True:
-                        if main_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[7]').text == "진행":
+                        if main_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[7]').text == '진행':
                             homework_name = main_driver.find_element_by_xpath(
                                 '// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[1] / strong / a').text
                             homework_time = main_driver.find_element_by_xpath(
@@ -329,19 +331,10 @@ class HomeworkAlarm:
                 return False
 
 
-
 def main():
     homework = HomeworkAlarm()
 
 
 if __name__ == '__main__':
-    # if uac_require():# 관리자 권한
-    main()
-    # else:
-    #     root = Tk()
-    #     root.title("과제 시간표")
-    #     root.configure(background='white')
-    #     label = Label(root, text='관리자 권한 받기 실패')
-    #     label.configure(background='white')
-    #     label.pack()
-    #     root.mainloop()
+    if uac_require():# 관리자 권한
+        main()
