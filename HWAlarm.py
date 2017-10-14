@@ -197,8 +197,10 @@ class HomeworkAlarm:
         while True:
             t = threading.Thread(target=self.auto_homework_loader)
             t.start()
-            t.join()
-            time.sleep(3600)
+            i = 0
+            while i < 12:
+                time.sleep(300)
+                i += 1
 
     def auto_homework_loader(self):
         if self.read_homework_list():
@@ -249,8 +251,6 @@ class HomeworkAlarm:
             file = open('./' + self.login_data[0] + '.bin', 'rb')
             self.homework_list = self.homework_file_list = pickle.load(file)
             file.close()
-        else:
-            self.read_homework_list()
         self.grid_homework_list()
 
     def equal_homework_list(self, list):
