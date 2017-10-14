@@ -68,6 +68,7 @@ class HomeworkAlarm:
             self.logout_btn = Button(self.root, text='로그아웃', command=self.click_logout, background='white')
             self.logout_btn.grid(row=0, column=5)
             self.read_homework_file()
+            self.root.mainloop()
 
 
         else:
@@ -116,8 +117,6 @@ class HomeworkAlarm:
         self.login()
 
     def click_submit(self, index):
-        print(self.homework_list)
-        print(index)
         subject_name = self.homework_list[index][0]
         homework_name = self.homework_list[index][1]
         submit_driver = webdriver.Chrome("./chromedriver.exe")
@@ -197,7 +196,6 @@ class HomeworkAlarm:
 
     def auto_homework_loader(self):
         if self.read_homework_list():
-            print("가져오자")
             i = 0
             count = len(self.subject_name)
             while i < count:
@@ -215,9 +213,10 @@ class HomeworkAlarm:
             self.submit.clear()
             self.submit_btn.clear()
         else:
-            print("안받음")
             time.sleep(3600)
+
         self.root.after(0, self.read_homework_file)
+
 
     def grid_homework_list(self):
         self.refresh_time()
@@ -243,51 +242,52 @@ class HomeworkAlarm:
             i += 1
         self.t = threading.Thread(target=self.auto_homework_loader)
         self.t.start()
-        self.root.mainloop()
 
     def read_homework_file(self):
         if os.path.isfile('./'+self.login_data[0]+'.bin'):
             file = open('./' + self.login_data[0] + '.bin', 'rb')
-            self.homework_file_list = pickle.load(file)
+            self.homework_list = self.homework_file_list = pickle.load(file)
             file.close()
-            self.homework_list = self.homework_file_list
         else:
             self.read_homework_list()
         self.grid_homework_list()
 
-    def equal_homework_list(self):
+    def equal_homework_list(self, list):
         if not os.path.isfile('./' + self.login_data[0] + '.bin'):
             return False
-        if self.homework_file_list == self.homework_list:
+        if self.homework_file_list == list:
             return True
         else:
             return False
 
     def read_homework_list(self):
-        main_driver = webdriver.PhantomJS("./phantomjs.exe")
-        main_driver.get("http://e-learn.cnu.ac.kr/")
-        time.sleep(1)
-        main_driver.find_element_by_xpath('// *[ @ id = "pop_login"]').click()
-        time.sleep(1)
-        main_driver.find_element_by_xpath('//*[@id="id"]').send_keys(self.login_data[0])
-        main_driver.find_element_by_xpath('//*[@id="pass"]').send_keys(self.login_data[1]+'\n')
-        time.sleep(5)  # 로그인 지연 시간
-        main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
-        hw_list = []
         self.homework_count = 0
+        try:
+            main_driver = webdriver.PhantomJS("./phantomjs.exe")
+            main_driver.get("http://e-learn.cnu.ac.kr/")
+            time.sleep(3)
+            main_driver.find_element_by_xpath('// *[ @ id = "pop_login"]').click()
+            time.sleep(1)
+            main_driver.find_element_by_xpath('//*[@id="id"]').send_keys(self.login_data[0])
+            main_driver.find_element_by_xpath('//*[@id="pass"]').send_keys(self.login_data[1]+'\n')
+            time.sleep(7)  # 로그인 지연 시간
+            main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
+        except Exception:
+            return False
+        hw_list = []
         i = 1
         try:
             while True:
-                time.sleep(1)
+                time.sleep(2)
                 j = 1
                 subject_name = str(main_driver.find_element_by_xpath(
                     '//*[@id="rows1"]/table/tbody/tr[' + str(i) + ']/td[4]/span[1]/a').text).split()[0]
                 main_driver.find_element_by_xpath(
                     '// *[ @ id = "rows1"] / table / tbody / tr[' + str(i) + '] / td[4] / span[1] / a').click()
 
-                time.sleep(1)
+                time.sleep(2)
                 main_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
-                time.sleep(1)
+                time.sleep(2)
                 try:
                     while True:
                         if main_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[7]').text == "진행":
@@ -301,7 +301,7 @@ class HomeworkAlarm:
                             if main_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[3]').text != '제출':
                                 submit = '미제출'
                             else:
-                                submit = '제출'
+                                submit = ' 제출 '
                             homework_info = [subject_name , homework_name , date, end_time, submit]
                             hw_list.append(homework_info)
                             self.homework_count += 1
@@ -310,24 +310,24 @@ class HomeworkAlarm:
                         time.sleep(1)
                 except Exception:
                     i += 1
-                main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
+                    main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
         except Exception:
             main_driver.close()
+            if self.homework_count == 0:
+                return False
             hw_list = self.homework_list_sort(hw_list)
-            if not self.homework_list == hw_list:
-                self.homework_list = hw_list
-            if self.homework_count != 0:
-                if not self.equal_homework_list():
-                    self.homework_file_list = self.homework_list
-                    file = open('./'+self.login_data[0]+'.bin', 'wb')
+            if self.homework_list == hw_list:
+                return False
+            else:
+                self.homework_file_list = self.homework_list = hw_list
+                try:
+                    file = open('./' + self.login_data[0] + '.bin', 'wb')
                     pickle.dump(self.homework_file_list, file)
                     file.close()
-                    return True
-                else:
-                    return False
-            else:
-                print('sry')
+                except Exception:
+                    file.close()
                 return False
+
 
 
 def main():
