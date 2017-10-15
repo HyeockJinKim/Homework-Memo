@@ -42,9 +42,13 @@ class HomeworkAlarm:
         self.remain = []
         self.submit_btn = []
         self.submit = []
-        threading.Thread(target=self.auto_load_thread).start()
+        self.auto_condition = True
+        self.auto = threading.Thread(target=self.auto_load_thread)
+        self.auto.start()
         self.login()
-
+        self.root.mainloop()
+        self.auto_condition = False
+        self.auto.join()
 
     def login(self):
         if os.path.isfile('./loginData.bin'):
@@ -68,7 +72,6 @@ class HomeworkAlarm:
             self.logout_btn = Button(self.root, text='로그아웃', command=self.click_logout, background='white')
             self.logout_btn.grid(row=0, column=5)
             self.read_homework_file()
-            self.root.mainloop()
 
         else:
             self.id_input = Label(self.root, text='아이디', font='Verdana 10 bold')
@@ -85,7 +88,7 @@ class HomeworkAlarm:
             self.login_btn.configure(background='white')
             self.login_btn.grid(row=0, column=2, rowspan=2)
 
-            self.root.mainloop()
+
 
     def click_logout(self):
         if os.path.isfile('./loginData.bin'):
@@ -197,22 +200,25 @@ class HomeworkAlarm:
         while True:
             t = threading.Thread(target=self.auto_homework_loader)
             t.start()
+            t.join()
             i = 0
             while i < 12:
                 time.sleep(300)
                 i += 1
+                if not self.auto_condition:
+                    return
 
     def auto_homework_loader(self):
         if self.read_homework_list():
             i = 0
             count = len(self.subject_name)
             while i < count:
-                Label(self.subject_name[i]).destroy()
-                Label(self.homework_name[i]).destroy()
-                Label(self.end_time[i]).destroy()
-                Label(self.remain[i]).destroy()
-                Label(self.submit[i]).destroy()
-                Button(self.submit_btn[i]).destroy()
+                self.subject_name[i].destroy()
+                self.homework_name[i].destroy()
+                self.end_time[i].destroy()
+                self.remain[i].destroy()
+                self.submit[i].destroy()
+                self.submit_btn[i].destroy()
                 i += 1
             self.subject_name.clear()
             self.homework_name.clear()
@@ -264,17 +270,18 @@ class HomeworkAlarm:
     def read_homework_list(self):
         self.homework_count = 0
         try:
-            main_driver = webdriver.PhantomJS("./phantomjs.exe")
-            main_driver.get("http://e-learn.cnu.ac.kr/")
-            time.sleep(3)
-            main_driver.find_element_by_xpath('// *[ @ id = "pop_login"]').click()
+            self.main_driver = webdriver.PhantomJS("./phantomjs.exe")
+
+            self.main_driver.get("http://e-learn.cnu.ac.kr/")
+            time.sleep(2)
+            self.main_driver.find_element_by_xpath('// *[ @ id = "pop_login"]').click()
             time.sleep(1)
-            main_driver.find_element_by_xpath('//*[@id="id"]').send_keys(self.login_data[0])
-            main_driver.find_element_by_xpath('//*[@id="pass"]').send_keys(self.login_data[1]+'\n')
-            time.sleep(7)  # 로그인 지연 시간
-            main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
+            self.main_driver.find_element_by_xpath('//*[@id="id"]').send_keys(self.login_data[0])
+            self.main_driver.find_element_by_xpath('//*[@id="pass"]').send_keys(self.login_data[1]+'\n')
+            time.sleep(5)  # 로그인 지연 시간
+            self.main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
         except Exception:
-            main_driver.close()
+            self.main_driver.quit()
             return False
         hw_list = []
         i = 1
@@ -282,25 +289,25 @@ class HomeworkAlarm:
             while True:
                 time.sleep(2)
                 j = 1
-                subject_name = str(main_driver.find_element_by_xpath(
+                subject_name = str(self.main_driver.find_element_by_xpath(
                     '//*[@id="rows1"]/table/tbody/tr[' + str(i) + ']/td[4]/span[1]/a').text).split()[0]
-                main_driver.find_element_by_xpath(
+                self.main_driver.find_element_by_xpath(
                     '// *[ @ id = "rows1"] / table / tbody / tr[' + str(i) + '] / td[4] / span[1] / a').click()
 
-                time.sleep(2)
-                main_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
-                time.sleep(2)
+                time.sleep(1)
+                self.main_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
+                time.sleep(1)
                 try:
                     while True:
-                        if main_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[7]').text == '진행':
-                            homework_name = main_driver.find_element_by_xpath(
+                        if self.main_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[7]').text == '진행':
+                            homework_name = self.main_driver.find_element_by_xpath(
                                 '// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[1] / strong / a').text
-                            homework_time = main_driver.find_element_by_xpath(
+                            homework_time = self.main_driver.find_element_by_xpath(
                                 '// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[2] / a').text
                             homework_time = homework_time.split()
                             date = homework_time[3].split('/')
                             end_time = homework_time[4].split(':')
-                            if main_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[3]').text != '제출':
+                            if self.main_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(j) + '] / td[3]').text != '제출':
                                 submit = '미제출'
                             else:
                                 submit = ' 제출 '
@@ -312,9 +319,9 @@ class HomeworkAlarm:
                         time.sleep(1)
                 except Exception:
                     i += 1
-                    main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
+                    self.main_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
         except Exception:
-            main_driver.close()
+            self.main_driver.quit()
             if self.homework_count == 0:
                 return False
             hw_list = self.homework_list_sort(hw_list)
@@ -326,9 +333,10 @@ class HomeworkAlarm:
                     file = open('./' + self.login_data[0] + '.bin', 'wb')
                     pickle.dump(self.homework_file_list, file)
                     file.close()
+                    return True
                 except Exception:
                     file.close()
-                return False
+                    return False
 
 
 def main():
