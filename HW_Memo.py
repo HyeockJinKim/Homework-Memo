@@ -274,6 +274,7 @@ class HomeworkAlarm:
             time.sleep(self.login_count)
             driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
             time.sleep(1)
+            subject_number = len(str(driver.find_element_by_xpath('// *[ @ id = "rows1"] / table').text).split('\n'))
         except Exception:
             driver.quit()
             return False
