@@ -32,8 +32,17 @@ class HomeworkAlarm:
     def __init__(self):
         self.root = Tk()
         self.root.title("과제 시간표")
+        # self.root.iconbitmap('HW_Memo.ico')
         self.root.configure(background='white')
+        if os.name == 'posix':
+            self.phantom = './phantomjs'
+            self.chrome = './chromedriver'
+        if os.name == 'nt':
+            self.phantom = './phantomjs.exe'
+            self.chrome = './chromedriver.exe'
         self.timer = 0
+        self.login_count = 2
+        self.is_submit = False
         self.homework_list = []
         self.homework_file_list = []
         self.login_data = []
@@ -104,18 +113,22 @@ class HomeworkAlarm:
     def click_submit(self, index):
         subject_name = self.homework_list[index][0]
         homework_name = self.homework_list[index][1]
-        submit_driver = webdriver.Chrome("./chromedriver.exe")
-        if not self.login_homepage(submit_driver):
-            return False
+        self.submit_driver = webdriver.Chrome(self.chrome)
+        self.is_submit = True
+        while not self.login_homepage(self.submit_driver):
+            self.submit_driver = webdriver.Chrome(self.chrome)
+            self.login_count += 1
+            if self.login_count > 10:
+                return False
         time.sleep(1)
         i = 1
         try:
             while True:
-                if subject_name == str(submit_driver.find_element_by_xpath('//*[@id="rows1"]/table/tbody/tr[' + str(i) + ']/td[4]/span[1]/a').text).split()[0]:
-                    submit_driver.find_element_by_xpath(
+                if subject_name == str(self.submit_driver.find_element_by_xpath('//*[@id="rows1"]/table/tbody/tr[' + str(i) + ']/td[4]/span[1]/a').text).split()[0]:
+                    self.submit_driver.find_element_by_xpath(
                         '// *[ @ id = "rows1"] / table / tbody / tr[' + str(i) + '] / td[4] / span[1] / a').click()
                     time.sleep(1)
-                    submit_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
+                    self.submit_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
                     time.sleep(1)
                     break
                 i += 1
@@ -124,21 +137,34 @@ class HomeworkAlarm:
         i = 1
         try:
             while True:
-                if homework_name == submit_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(i) + '] / td[1] / strong / a').text:
-                    submit_driver.find_element_by_xpath(
+                if homework_name == self.submit_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(i) + '] / td[1] / strong / a').text:
+                    self.submit_driver.find_element_by_xpath(
                         '// *[ @ id = "con"] / table[2] / tbody / tr[' + str(i) + '] / td[1] / strong / a').click()
+                    break
                 i += 1
         except Exception:
             return
 
-    # auto thread로 계속 값을 가져옴.
+        while len(self.submit_driver.get_window_size()) == 2:
+            time.sleep(5)
+        self.submit_driver.quit()
+        self.is_submit = False
+        self.timer = 0
+        time.sleep(1)
+        t = threading.Thread(target=self.auto_homework_loader, daemon=True)
+        t.start()
+        t.join()
+
+
+    # auto thread 로 계속 값을 가져옴.
     def auto_load_thread(self):
         while True:
             t = threading.Thread(target=self.auto_homework_loader)
             t.start()
             t.join()
-            while self.timer < 6:
-                time.sleep(600)
+            time.sleep(30-(datetime.datetime.now().minute%30))
+            while self.timer < 4:
+                time.sleep(3000)
                 self.root.after(0, self.grid_homework_list)
                 self.timer += 1
             self.timer = 0
@@ -165,7 +191,8 @@ class HomeworkAlarm:
         self.root.after(0, self.grid_homework_list)
 
     # 시간에 따라 list를 sort
-    def homework_list_sort(self, sort_list):
+    @staticmethod
+    def homework_list_sort(sort_list):
         i = 0
         homework_time = []
         for homework_data in sort_list:
@@ -220,15 +247,13 @@ class HomeworkAlarm:
             self.end_time.append(Label(self.root, text=time_info, background='white'))
             self.remain.append(Label(self.root, text=homework_data[5], background='white'))
             self.submit.append(Label(self.root, text=homework_data[4], background='white'))
-            action = partial(self.click_submit, i)
-            self.submit_btn.append(Button(self.root, text='제출하기', command=action, background='red', foreground='white'))
+            self.submit_btn.append(Button(self.root, text='제출하기', command=threading.Thread(target=partial(self.click_submit, i), daemon=True).start, background='red', foreground='white'))
             self.subject_name[i].grid(row=i + 1, column=0)
             self.homework_name[i].grid(row=i + 1, column=1)
             self.end_time[i].grid(row=i + 1, column=2)
             self.remain[i].grid(row=i + 1, column=3)
             self.submit[i].grid(row=i + 1, column=4)
             self.submit_btn[i].grid(row=i + 1, column=5)
-
             i += 1
 
     def read_homework_file(self):
@@ -238,14 +263,6 @@ class HomeworkAlarm:
             file.close()
             self.grid_homework_list()
 
-    # def equal_homework_list(self, hw_list):
-    #     if not os.path.isfile('./' + self.login_data[0] + '.bin'):
-    #         return False
-    #     if self.homework_file_list == hw_list:
-    #         return True
-    #     else:
-    #         return False
-
     def login_homepage(self, driver):
         try:
             driver.get("http://e-learn.cnu.ac.kr/")
@@ -254,7 +271,7 @@ class HomeworkAlarm:
             time.sleep(1)
             driver.find_element_by_xpath('//*[@id="id"]').send_keys(self.login_data[0])
             driver.find_element_by_xpath('//*[@id="pass"]').send_keys(self.login_data[1] + '\n')
-            time.sleep(1)
+            time.sleep(self.login_count)
             driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
             time.sleep(1)
         except Exception:
@@ -263,12 +280,18 @@ class HomeworkAlarm:
         return True
 
     def read_homework_list(self):
-        driver = webdriver.PhantomJS("./phantomjs.exe")
-        if not self.login_homepage(driver):
-            return False
+        # driver = webdriver.Chrome(self.chrome) #test용 Chrome driver
+        self.root.title("과제 시간표  (읽는 중...)")
+        self.auto_driver = webdriver.PhantomJS(self.phantom)
+        while not self.login_homepage(self.auto_driver):
+            self.auto_driver = webdriver.PhantomJS(self.phantom)
+            self.login_count += 1
+            if self.login_count > 10:
+                self.root.title("과제 시간표   로그인 실패!")
+                return False
 
         try:
-            subject_number = len(str(driver.find_element_by_xpath('// *[ @ id = "rows1"] / table').text).split('\n'))
+            subject_number = len(str(self.auto_driver.find_element_by_xpath('// *[ @ id = "rows1"] / table').text).split('\n'))
             subject_number = int(subject_number / 2)
             hw_list = []
             i = 0
@@ -278,34 +301,39 @@ class HomeworkAlarm:
 
             i = 1
             while i < subject_number:
-                driver.execute_script("window.open()")
+                self.auto_driver.execute_script("window.open()")
                 i += 1
 
             i = 1
             while i < subject_number:
-                driver.switch_to_window(driver.window_handles[i])
-                driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
+                self.auto_driver.switch_to_window(self.auto_driver.window_handles[i])
+                self.auto_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
                 i += 1
 
             i = 0
             while i < subject_number:
-                driver.switch_to_window(driver.window_handles[i])
+                self.auto_driver.switch_to_window(self.auto_driver.window_handles[i])
                 i += 1
-                hw_list[i - 1].append(str(driver.find_element_by_xpath('//*[@id="rows1"]/table/tbody/tr[' + str(i)
+                hw_list[i - 1].append(str(self.auto_driver.find_element_by_xpath('//*[@id="rows1"]/table/tbody/tr[' + str(i)
                                                                        + ']/td[4]/span[1]/a').text).split()[0])
-                driver.find_element_by_xpath('// *[ @ id = "rows1"] / table / tbody / tr[' + str(i)
+                self.auto_driver.find_element_by_xpath('// *[ @ id = "rows1"] / table / tbody / tr[' + str(i)
                                              + '] / td[4] / span[1] / a').click()
-                time.sleep(1)
-                driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
-                hw_list[i - 1].append(str(driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] ').text).split('\n'))
-            driver.quit()
+                time.sleep(self.login_count)
+                self.auto_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
+                hw_list[i - 1].append(str(self.auto_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] ').text).split('\n'))
+            self.auto_driver.quit()
 
             self.homework_list.clear()
             i = 0
-            num = len(hw_list[i][1]) - 1
+            # num = len(hw_list[i][1]) - 1
+            num = 1
+
             while i < subject_number:
-                hw = str(hw_list[i][1][num]).split()
-                if hw[len(hw) - 1] != '종료':
+                if num < len(hw_list[i][1]):
+                    hw = str(hw_list[i][1][num]).split()
+                    if hw[len(hw) - 1] == '종료':
+                        num += 1
+                        continue
                     subject_name = hw_list[i][0]
                     name_len = len(hw) - 12
                     j = 1
@@ -318,28 +346,38 @@ class HomeworkAlarm:
                     submit = hw[7 + j]
                     temp = [subject_name, homework_name, date, end_time, submit]
                     self.homework_list.append(temp)
-                    num -= 1
+                    num += 1
                 else:
                     i += 1
-                    if i < subject_number:
-                        num = len(hw_list[i][1]) - 1
+                    num = 1
 
             self.homework_list_sort(self.homework_list)
             self.homework_file_list = self.homework_list
             file = open('./' + self.login_data[0] + '.bin', 'wb')
             pickle.dump(self.homework_list, file)
             file.close()
-
+            self.root.title("과제 시간표")
             return True
         except Exception:
-            driver.quit()
+            self.auto_driver.quit()
+            self.root.title("과제 시간표   읽기 실패!")
             return False
 
 
 def main():
     homework = HomeworkAlarm()
-
+    if homework.auto_driver.service.process is not None:
+        homework.auto_driver.quit()
+    if homework.is_submit:
+        homework.submit_driver.quit()
+    # driver.service.process
 
 if __name__ == '__main__':
-    # if uac_require():# 관리자 권한
+    if os.name == "posix":
+        os.chmod('chromedriver', 0o777)
+        os.chmod('phantomjs', 0o777)
         main()
+    if os.name == "nt":
+        # if uac_require():  # 관리자 권한
+            main()
+
