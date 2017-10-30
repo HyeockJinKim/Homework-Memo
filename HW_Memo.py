@@ -155,7 +155,6 @@ class HomeworkAlarm:
         t.start()
         t.join()
 
-
     # auto thread 로 계속 값을 가져옴.
     def auto_load_thread(self):
         while True:
@@ -170,7 +169,8 @@ class HomeworkAlarm:
             self.timer = 0
 
     def auto_homework_loader(self):
-        self.read_homework_list()
+        while not self.read_homework_list():
+            time.sleep(5)
         i = 0
         count = len(self.subject_name)
         while i < count:
@@ -322,8 +322,8 @@ class HomeworkAlarm:
                 time.sleep(self.login_count)
                 self.auto_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
                 hw_list[i - 1].append(str(self.auto_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] ').text).split('\n'))
-            self.auto_driver.quit()
 
+            self.auto_driver.quit()
             self.homework_list.clear()
             i = 0
             # num = len(hw_list[i][1]) - 1
@@ -379,6 +379,6 @@ if __name__ == '__main__':
         os.chmod('phantomjs', 0o777)
         main()
     if os.name == "nt":
-        # if uac_require():  # 관리자 권한
+        if uac_require():  # 관리자 권한
             main()
 
