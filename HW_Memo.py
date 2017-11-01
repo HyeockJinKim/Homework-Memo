@@ -85,10 +85,14 @@ class HomeworkAlarm:
             self.password_input.configure(background='white')
             self.password_input.grid(row=1, column=0)
             self.password_value = Entry(self.root, show='*')
+            self.password_value.bind('<Return>', self.enter_key)
             self.password_value.grid(row=1, column=1)
             self.login_btn = Button(self.root, text='로그인', command=self.click_login, height=2, font='Verdana 10 bold')
             self.login_btn.configure(background='white')
             self.login_btn.grid(row=0, column=2, rowspan=2)
+
+    def enter_key(self, event):
+        self.click_login()
 
     def click_login(self):
         encoder = codecs.getencoder('hex')
@@ -324,126 +328,124 @@ class HomeworkAlarm:
         return True
 
     def read_homework_list(self):
-        # self.auto_driver = webdriver.Chrome(self.chrome) #test용 Chrome driver
         self.root.title("과제 시간표  (읽는 중...)")
+        # self.auto_driver = webdriver.Chrome(self.chrome)  # test용 Chrome driver
         self.auto_driver = webdriver.PhantomJS(self.phantom)
         if not self.login_homepage(self.auto_driver):
             self.auto_driver = webdriver.PhantomJS(self.phantom)
+            # self.auto_driver = webdriver.Chrome(self.chrome)  # test용 Chrome driver
             self.login_count += 1
             if not self.login_homepage(self.auto_driver):
                 self.auto_driver = webdriver.PhantomJS(self.phantom)
+                # self.auto_driver = webdriver.Chrome(self.chrome)  # test용 Chrome driver
                 self.login_count += 4
                 if not self.login_homepage(self.auto_driver):
                     return False
 
+        subject_number = len(str(self.auto_driver.find_element_by_xpath('// *[ @ id = "rows1"] / table').text).split('\n'))
+        subject_number = int(subject_number / 2)
+        hw_list = []
+        i = 0
+        while i < subject_number:
+            hw_list.append([])
+            i += 1
 
-        try:
-            subject_number = len(str(self.auto_driver.find_element_by_xpath('// *[ @ id = "rows1"] / table').text).split('\n'))
-            subject_number = int(subject_number / 2)
-            hw_list = []
-            i = 0
-            while i < subject_number:
-                hw_list.append([])
-                i += 1
+        i = 1
+        while i < subject_number:
+            self.auto_driver.execute_script("window.open()")
+            i += 1
+        i = 1
+        while i < subject_number:
+            self.auto_driver.switch_to_window(self.auto_driver.window_handles[i])
+            self.auto_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
+            i += 1
 
-            i = 1
-            while i < subject_number:
-                self.auto_driver.execute_script("window.open()")
-                i += 1
-            i = 1
-            while i < subject_number:
-                self.auto_driver.switch_to_window(self.auto_driver.window_handles[i])
-                self.auto_driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
-                i += 1
+        i = 0
+        while i < subject_number:
+            self.auto_driver.switch_to_window(self.auto_driver.window_handles[i])
+            i += 1
 
-            i = 0
-            while i < subject_number:
-                self.auto_driver.switch_to_window(self.auto_driver.window_handles[i])
-                i += 1
+            j = 0
+            while True:
+                try:
+                    hw_list[i - 1].append(str(self.auto_driver.find_element_by_xpath('//*[@id="rows1"]/table/tbody/tr[' + str(i)
+                                                                           + ']/td[4]/span[1]/a').text).split()[0])
+                    break
+                except Exception:
+                    j += 1
+                    if j < 50:
+                        time.sleep(0.2)
+                    else:
+                        self.root.title("과제 시간표   읽기 실패!")
+                        return False
 
-                j = 0
-                while True:
-                    try:
-                        hw_list[i - 1].append(str(self.auto_driver.find_element_by_xpath('//*[@id="rows1"]/table/tbody/tr[' + str(i)
-                                                                               + ']/td[4]/span[1]/a').text).split()[0])
-                        break
-                    except Exception:
-                        j += 1
-                        if j < 50:
-                            time.sleep(0.2)
-                        else:
-                            self.root.title("과제 시간표   읽기 실패!")
-                            return False
+            self.auto_driver.find_element_by_xpath('// *[ @ id = "rows1"] / table / tbody / tr[' + str(i)
+                                         + '] / td[4] / span[1] / a').click()
 
+            j = 0
+            while True:
+                try:
+                    self.auto_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
+                    break
+                except Exception:
+                    j += 1
+                    if j < 50:
+                        time.sleep(0.2)
+                    else:
+                        self.root.title("과제 시간표   읽기 실패!")
+                        return False
 
-                self.auto_driver.find_element_by_xpath('// *[ @ id = "rows1"] / table / tbody / tr[' + str(i)
-                                             + '] / td[4] / span[1] / a').click()
+            j = 0
+            while True:
+                try:
+                    hw_list[i - 1].append(str(self.auto_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] ').text).split('\n'))
+                    break
+                except Exception:
+                    j += 1
+                    if j < 50:
+                        time.sleep(0.2)
+                    else:
+                        self.root.title("과제 시간표   읽기 실패!")
+                        return False
 
-                j = 0
-                while True:
-                    try:
-                        self.auto_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
-                        break
-                    except Exception:
-                        j += 1
-                        if j < 50:
-                            time.sleep(0.2)
-                        else:
-                            self.root.title("과제 시간표   읽기 실패!")
-                            return False
+        self.auto_driver.quit()
+        self.homework_list.clear()
+        i = 0
+        num = 1
 
-                j = 0
-                while True:
-                    try:
-                        hw_list[i - 1].append(str(self.auto_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] ').text).split('\n'))
-                        break
-                    except Exception:
-                        j += 1
-                        if j < 50:
-                            time.sleep(0.2)
-                        else:
-                            self.root.title("과제 시간표   읽기 실패!")
-                            return False
-
-            self.auto_driver.quit()
-            self.homework_list.clear()
-            i = 0
-            num = 1
-
-            while i < subject_number:
-                if num < len(hw_list[i][1]):
-                    hw = str(hw_list[i][1][num]).split()
-                    if hw[len(hw) - 1] == '종료':
-                        num += 1
-                        continue
-                    subject_name = hw_list[i][0]
-                    name_len = len(hw) - 12
-                    j = 1
-                    homework_name = hw[2]
-                    while j < name_len:
-                        homework_name += ' ' + hw[2 + j]
-                        j += 1
-                    date = hw[5 + name_len].split('/')
-                    end_time = hw[6 + name_len].split(':')
-                    submit = hw[7 + j]
-                    temp = [subject_name, homework_name, date, end_time, submit]
-                    self.homework_list.append(temp)
-                    num += 1
-                else:
+        while i < subject_number:
+            if num < len(hw_list[i][1]):
+                hw = str(hw_list[i][1][num]).split()
+                if hw[0] == '과제가':
                     i += 1
-                    num = 1
+                    continue
+                if hw[len(hw) - 1] == '종료':
+                    num += 1
+                    continue
+                subject_name = hw_list[i][0]
+                name_len = len(hw) - 12
+                j = 1
+                homework_name = hw[2]
+                while j < name_len:
+                    homework_name += ' ' + hw[2 + j]
+                    j += 1
+                date = hw[5 + name_len].split('/')
+                end_time = hw[6 + name_len].split(':')
+                submit = hw[7 + j]
+                temp = [subject_name, homework_name, date, end_time, submit]
+                self.homework_list.append(temp)
+                num += 1
+            else:
+                i += 1
+                num = 1
 
-            self.homework_list_sort(self.homework_list)
-            self.homework_file_list = self.homework_list
-            file = open('./' + self.login_data[0] + '.bin', 'wb')
-            pickle.dump(self.homework_list, file)
-            file.close()
-            self.root.title("과제 시간표")
-            return True
-        except Exception:
-            self.auto_driver.quit()
-            self.root.title("과제 시간표   읽기 실패!")
-            return False
+        self.homework_list_sort(self.homework_list)
+        self.homework_file_list = self.homework_list
+        file = open('./' + self.login_data[0] + '.bin', 'wb')
+        pickle.dump(self.homework_list, file)
+        file.close()
+        self.root.title("과제 시간표")
+        return True
 
 
 def main():
