@@ -42,7 +42,6 @@ class HomeworkAlarm:
             self.chrome = './chromedriver.exe'
         self.timer = 0
         self.login_count = 2
-        self.homepage_count = 0
         self.is_submit = False
         self.homework_list = []
         self.homework_file_list = []
@@ -125,21 +124,43 @@ class HomeworkAlarm:
         try:
             while True:
                 if subject_name == str(self.submit_driver.find_element_by_xpath('//*[@id="rows1"]/table/tbody/tr[' + str(i) + ']/td[4]/span[1]/a').text).split()[0]:
-                    self.submit_driver.find_element_by_xpath(
-                        '// *[ @ id = "rows1"] / table / tbody / tr[' + str(i) + '] / td[4] / span[1] / a').click()
-                    time.sleep(1)
-                    self.submit_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
-                    time.sleep(1)
+
+                    j = 0
+                    while True:
+                        try:
+                            self.submit_driver.find_element_by_xpath(
+                                '// *[ @ id = "rows1"] / table / tbody / tr[' + str(
+                                    i) + '] / td[4] / span[1] / a').click()
+                            break
+                        except Exception:
+                            j += 1
+                            if j < 50:
+                                time.sleep(0.2)
+                            else:
+                                return
+
+                    j = 0
+                    while True:
+                        try:
+                            self.submit_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
+                            break
+                        except Exception:
+                            j += 1
+                            if j < 50:
+                                time.sleep(0.2)
+                            else:
+                                return
                     break
                 i += 1
         except Exception:
             return
+        time.sleep(1)
         i = 1
         try:
             while True:
+
                 if homework_name == self.submit_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(i) + '] / td[1] / strong / a').text:
-                    self.submit_driver.find_element_by_xpath(
-                        '// *[ @ id = "con"] / table[2] / tbody / tr[' + str(i) + '] / td[1] / strong / a').click()
+                    self.submit_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] / tbody / tr[' + str(i) + '] / td[1] / strong / a').click()
                     break
                 i += 1
         except Exception:
@@ -163,7 +184,7 @@ class HomeworkAlarm:
             t.join()
             time.sleep(30-(datetime.datetime.now().minute%30))
             while self.timer < 4:
-                time.sleep(3000)
+                time.sleep(1800)
                 self.root.after(0, self.grid_homework_list)
                 self.timer += 1
             self.timer = 0
@@ -265,15 +286,38 @@ class HomeworkAlarm:
     def login_homepage(self, driver):
         try:
             driver.get("http://e-learn.cnu.ac.kr/")
-            time.sleep(2)
-            driver.find_element_by_xpath('// *[ @ id = "pop_login"]').click()
-            time.sleep(1)
+
+            j = 0
+            while True:
+                try:
+                    driver.find_element_by_xpath('// *[ @ id = "pop_login"]').click()
+                    break
+                except Exception:
+                    j += 1
+                    if j < 50:
+                        time.sleep(0.2)
+                    else:
+                        self.root.title("과제 시간표   로그인 실패!")
+                        return False
+
             driver.find_element_by_xpath('//*[@id="id"]').send_keys(self.login_data[0])
             driver.find_element_by_xpath('//*[@id="pass"]').send_keys(self.login_data[1] + '\n')
             time.sleep(self.login_count)
             driver.get('http://e-learn.cnu.ac.kr/lms/myLecture/doListView.dunet')
-            time.sleep(1)
-            subject_number = len(str(driver.find_element_by_xpath('// *[ @ id = "rows1"] / table').text).split('\n'))
+
+            j = 0
+            while True:
+                try:
+                    subject_number = len(str(driver.find_element_by_xpath('// *[ @ id = "rows1"] / table').text).split('\n'))
+                    break
+                except Exception:
+                    j += 1
+                    if j < 50:
+                        time.sleep(0.2)
+                    else:
+                        self.root.title("과제 시간표   로그인 실패!")
+                        return False
+
         except Exception:
             driver.quit()
             return False
@@ -283,13 +327,15 @@ class HomeworkAlarm:
         # self.auto_driver = webdriver.Chrome(self.chrome) #test용 Chrome driver
         self.root.title("과제 시간표  (읽는 중...)")
         self.auto_driver = webdriver.PhantomJS(self.phantom)
-        while not self.login_homepage(self.auto_driver):
-            # self.auto_driver = webdriver.Chrome(self.chrome)  # test용 Chrome driver
+        if not self.login_homepage(self.auto_driver):
             self.auto_driver = webdriver.PhantomJS(self.phantom)
             self.login_count += 1
-            if self.login_count > 10:
-                self.root.title("과제 시간표   로그인 실패!")
-                return False
+            if not self.login_homepage(self.auto_driver):
+                self.auto_driver = webdriver.PhantomJS(self.phantom)
+                self.login_count += 4
+                if not self.login_homepage(self.auto_driver):
+                    return False
+
 
         try:
             subject_number = len(str(self.auto_driver.find_element_by_xpath('// *[ @ id = "rows1"] / table').text).split('\n'))
@@ -323,8 +369,8 @@ class HomeworkAlarm:
                         break
                     except Exception:
                         j += 1
-                        if j < 10:
-                            time.sleep(1)
+                        if j < 50:
+                            time.sleep(0.2)
                         else:
                             self.root.title("과제 시간표   읽기 실패!")
                             return False
@@ -340,8 +386,8 @@ class HomeworkAlarm:
                         break
                     except Exception:
                         j += 1
-                        if j < 10:
-                            time.sleep(1)
+                        if j < 50:
+                            time.sleep(0.2)
                         else:
                             self.root.title("과제 시간표   읽기 실패!")
                             return False
@@ -353,8 +399,8 @@ class HomeworkAlarm:
                         break
                     except Exception:
                         j += 1
-                        if j < 10:
-                            time.sleep(1)
+                        if j < 50:
+                            time.sleep(0.2)
                         else:
                             self.root.title("과제 시간표   읽기 실패!")
                             return False
@@ -416,4 +462,5 @@ if __name__ == '__main__':
     if os.name == "nt":
         if uac_require():  # 관리자 권한
             main()
+    # if os.name == ''  platform 을 이용하자!
 
