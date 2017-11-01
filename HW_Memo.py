@@ -42,6 +42,7 @@ class HomeworkAlarm:
             self.chrome = './chromedriver.exe'
         self.timer = 0
         self.login_count = 2
+        self.homepage_count = 0
         self.is_submit = False
         self.homework_list = []
         self.homework_file_list = []
@@ -52,7 +53,6 @@ class HomeworkAlarm:
         self.remain = []
         self.submit_btn = []
         self.submit = []
-        self.timer = datetime.datetime.now().minute
         self.login()
         self.root.mainloop()
 
@@ -154,7 +154,6 @@ class HomeworkAlarm:
         t = threading.Thread(target=self.auto_homework_loader, daemon=True)
         t.start()
         t.join()
-
 
     # auto thread 로 계속 값을 가져옴.
     def auto_load_thread(self):
@@ -281,10 +280,11 @@ class HomeworkAlarm:
         return True
 
     def read_homework_list(self):
-        # driver = webdriver.Chrome(self.chrome) #test용 Chrome driver
+        # self.auto_driver = webdriver.Chrome(self.chrome) #test용 Chrome driver
         self.root.title("과제 시간표  (읽는 중...)")
         self.auto_driver = webdriver.PhantomJS(self.phantom)
         while not self.login_homepage(self.auto_driver):
+            # self.auto_driver = webdriver.Chrome(self.chrome)  # test용 Chrome driver
             self.auto_driver = webdriver.PhantomJS(self.phantom)
             self.login_count += 1
             if self.login_count > 10:
@@ -304,7 +304,6 @@ class HomeworkAlarm:
             while i < subject_number:
                 self.auto_driver.execute_script("window.open()")
                 i += 1
-
             i = 1
             while i < subject_number:
                 self.auto_driver.switch_to_window(self.auto_driver.window_handles[i])
@@ -315,18 +314,54 @@ class HomeworkAlarm:
             while i < subject_number:
                 self.auto_driver.switch_to_window(self.auto_driver.window_handles[i])
                 i += 1
-                hw_list[i - 1].append(str(self.auto_driver.find_element_by_xpath('//*[@id="rows1"]/table/tbody/tr[' + str(i)
-                                                                       + ']/td[4]/span[1]/a').text).split()[0])
+
+                j = 0
+                while True:
+                    try:
+                        hw_list[i - 1].append(str(self.auto_driver.find_element_by_xpath('//*[@id="rows1"]/table/tbody/tr[' + str(i)
+                                                                               + ']/td[4]/span[1]/a').text).split()[0])
+                        break
+                    except Exception:
+                        j += 1
+                        if j < 10:
+                            time.sleep(1)
+                        else:
+                            self.root.title("과제 시간표   읽기 실패!")
+                            return False
+
+
                 self.auto_driver.find_element_by_xpath('// *[ @ id = "rows1"] / table / tbody / tr[' + str(i)
                                              + '] / td[4] / span[1] / a').click()
-                time.sleep(self.login_count)
-                self.auto_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
-                hw_list[i - 1].append(str(self.auto_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] ').text).split('\n'))
-            self.auto_driver.quit()
 
+                j = 0
+                while True:
+                    try:
+                        self.auto_driver.find_element_by_xpath('//*[@id="leftSnb"]/li[8]/a').click()
+                        break
+                    except Exception:
+                        j += 1
+                        if j < 10:
+                            time.sleep(1)
+                        else:
+                            self.root.title("과제 시간표   읽기 실패!")
+                            return False
+
+                j = 0
+                while True:
+                    try:
+                        hw_list[i - 1].append(str(self.auto_driver.find_element_by_xpath('// *[ @ id = "con"] / table[2] ').text).split('\n'))
+                        break
+                    except Exception:
+                        j += 1
+                        if j < 10:
+                            time.sleep(1)
+                        else:
+                            self.root.title("과제 시간표   읽기 실패!")
+                            return False
+
+            self.auto_driver.quit()
             self.homework_list.clear()
             i = 0
-            # num = len(hw_list[i][1]) - 1
             num = 1
 
             while i < subject_number:
@@ -379,6 +414,6 @@ if __name__ == '__main__':
         os.chmod('phantomjs', 0o777)
         main()
     if os.name == "nt":
-        # if uac_require():  # 관리자 권한
+        if uac_require():  # 관리자 권한
             main()
 
