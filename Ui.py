@@ -9,7 +9,6 @@ import threading
 import time
 
 
-
 class Ui:
     def __init__(self):
         self.ui = Tk()
@@ -17,8 +16,7 @@ class Ui:
         self.reader = Driver()
         self.homework = HomeworkList()
         self.timer = 0
-        self.auto = threading.Thread(target=self.auto_load_thread)
-        self.auto.setDaemon(True)
+        self.auto = threading.Thread(target=self.auto_load_thread, daemon=True)
         self.id_input = Label(self.ui, text='아이디', font='Verdana 10 bold', background='white')
         self.id_value = Entry(self.ui)
         self.password_input = Label(self.ui, text='비밀번호', font='Verdana 10 bold', background='white')
@@ -81,7 +79,9 @@ class Ui:
     def click_submit(self, index):
         submit_driver = self.reader.create_driver('chrome')
         self.reader.login_homepage(submit_driver)
-        self.reader.submit_homework(submit_driver, index)
+        if not self.reader.submit_homework(submit_driver, self.homework.homework_list[index]):
+            self.reader.delete_driver(submit_driver)
+            return
         self.reader.wait_terminate(submit_driver)
         self.reader.delete_driver(submit_driver)
         self.auto_homework_loader()

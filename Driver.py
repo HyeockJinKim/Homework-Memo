@@ -77,7 +77,6 @@ class Driver:
         return True
 
     def select_subject_name(self, driver, i):
-        driver.switch_to_window(driver.window_handles[i])
         j = 0
         while True:
             try:
@@ -177,11 +176,11 @@ class Driver:
 
             i = 0
             while i < subject_number:
+                driver.switch_to_window(driver.window_handles[i])
                 if not self.select_subject_name(driver, i):
                     return False
                 i += 1
 
-                j = 0
                 if not self.find_submit_btn(driver):
                     return False
 
@@ -192,26 +191,24 @@ class Driver:
             return False
         return True
 
-    def wait_terminate(self, driver):
+    @staticmethod
+    def wait_terminate(driver):
         while len(driver.get_window_size()) == 2:
             time.sleep(5)
 
     # 제출하기 기능
-    def submit_homework(self, driver, index):
-        subject_name = self.homework_table[index][0]
-        homework_name = self.homework_table[index][1]
+    def submit_homework(self, driver, name_list):
+        subject_name = name_list[0]
+        homework_name = name_list[1]
         i = 1
         try:
             while True:
                 if subject_name == str(driver.find_element_by_xpath(
                                         '//*[@id="rows1"]/table/tbody/tr[' + str(i) + ']/td[4]/span[1]/a').text).split()[0]:
-
-                    if not self.select_subject_name(driver, i):
-                        return False
-
+                    driver.find_element_by_xpath('// *[ @ id = "rows1"] / table / tbody / tr[' + str(i)
+                                                 + '] / td[4] / span[1] / a').click()
                     if not self.find_submit_btn(driver):
                         return False
-
                     break
                 i += 1
         except Exception:
