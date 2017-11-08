@@ -121,7 +121,6 @@ class Ui:
         self.refresh_time()
         i = 0
         self.ui.title("과제 시간표")
-        print(self.homework.homework_list)
         for homework_data in self.homework.homework_list:
             time_info = '20' + homework_data[2][0] + '년 ' + homework_data[2][1] + '월 ' + homework_data[2][2] + '일 ' \
                         + homework_data[3][0] + '시 ' + homework_data[3][1] + '분까지...'
