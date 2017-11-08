@@ -97,20 +97,24 @@ class Ui:
             remain_days.append((datetime.date(int(year), int(homework_data[2][1]), int(homework_data[2][2]))
                                 - now_day).days)
         i = 0
+        remove_item =[]
         for homework_data in self.homework.homework_list:
             if remain_days[i] > 1:
                 homework_data.append(str(remain_days[i]) + ' 일 전..')
-                continue
-            if remain_days[i] >= 0:
+            elif remain_days[i] >= 0:
                 remain_time = int(((remain_days[i] * 24 + int(homework_data[3][0]) - now.hour) * 60
                                    + int(homework_data[3][1]) - now.minute) / 60)
                 if remain_time > 24:
                     homework_data.append('1 일 전..')
                 elif remain_time > 0:
                     homework_data.append(str(remain_time) + ' 시간 전..')
-                elif remain_time == 0:
+                else:
                     homework_data.append('1 시간 이내..')
+            else:
+                remove_item.append(homework_data)
             i += 1
+        for remove in remove_item:
+            self.homework.homework_list.remove(remove)
 
     # ui에 적용.
     def grid_homework_list(self):
