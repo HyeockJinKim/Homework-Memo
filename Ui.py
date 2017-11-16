@@ -158,8 +158,8 @@ class Ui:
         while True:
             self.auto_homework_loader()
             time.sleep(30 - (datetime.datetime.now().minute % 30))
-            while self.timer < 4:
-                time.sleep(1800)
+            while self.timer < 24:
+                time.sleep(300)
                 self.ui.after(0, self.grid_homework_list)
                 self.timer += 1
             self.timer = 0
