@@ -24,6 +24,8 @@ class Ui:
         self.password_value.bind('<Return>', self.enter_key)
         self.login_btn = Button(self.ui, text='로그인', command=self.click_login, height=2, font='Verdana 10 bold'
                                 , background='white')
+        self.is_rest = False
+        self.time_interval = 24
         self.subject_name = []
         self.homework_name = []
         self.end_time = []
@@ -49,7 +51,6 @@ class Ui:
             Button(self.ui, text='로그아웃', command=self.click_logout, background='white').grid(row=0, column=5)
             self.read_homework_file()
             self.auto.start()
-
         else:
             self.id_input.grid(row=0, column=0)
             self.id_value.grid(row=0, column=1)
@@ -140,6 +141,19 @@ class Ui:
             self.submit[i].grid(row=i + 1, column=4)
             self.submit_btn[i].grid(row=i + 1, column=5)
             i += 1
+        if i == 0:
+            self.subject_name.append(Label(self.ui, text='현재 ', background='white'))
+            self.homework_name.append(Label(self.ui, text='남아있는 ', background='white'))
+            self.end_time.append(Label(self.ui, text='e-learning', background='white'))
+            self.remain.append(Label(self.ui, text='과제가', background='white'))
+            self.submit.append(Label(self.ui, text='없습니다.', background='white'))
+            self.submit_btn.append(Label(self.ui, text='^^ ', background='white'))
+            self.subject_name[i].grid(row=i + 1, column=0)
+            self.homework_name[i].grid(row=i + 1, column=1)
+            self.end_time[i].grid(row=i + 1, column=2)
+            self.remain[i].grid(row=i + 1, column=3)
+            self.submit[i].grid(row=i + 1, column=4)
+            self.submit_btn[i].grid(row=i + 1, column=5)
 
     def read_homework_file(self):
         if os.path.isfile('./' + self.reader.Login.login_data[0] + '.bin'):
@@ -158,9 +172,9 @@ class Ui:
         while True:
             self.auto_homework_loader()
             time.sleep(30 - (datetime.datetime.now().minute % 30))
-            while self.timer < 24:
+            while self.timer < self.time_interval:
                 time.sleep(300)
-                self.ui.after(0, self.grid_homework_list)
+                self.refresh_ui()
                 self.timer += 1
             self.timer = 0
 
