@@ -1,7 +1,11 @@
 # Homework-Memo
-This inform homework in CNU E-learning
 
-This program gets the information of the homework in CNU E-learning through Selenium.
+## 이 프로그램은 CNU E-learning의 과제를 받아와 과제 시간을 보여주는 프로그램입니다.
 
-When you enter the e-learning login information on the first screen, 
-it automatically takes the information of the assignment and displays it in the window.
+1. 첫 화면에서 e-learning의 ID, password를 입력하세요.
+2. e-learning에서 과제를 가져올 때까지 기다려주세요.
+-  현재 과제 목록을 가져올 때 20초정도 걸립니다.
+3. 과제의 남은 기간을 확인하세요.
+
++ 과제 제출 버튼을 누르면 해당 과제의 과제제출 홈페이지까지 이동합니다. 
+
