@@ -1,6 +1,4 @@
-# Homework-Memo
-
-## 이 프로그램은 CNU E-learning의 과제를 받아와 과제 시간을 보여주는 프로그램입니다.
+# 이 프로그램은 CNU E-learning의 과제를 받아와 과제 시간을 보여주는 프로그램입니다.
 
 1. 첫 화면에서 e-learning의 ID, password를 입력하세요.
 2. e-learning에서 과제를 가져올 때까지 기다려주세요.
